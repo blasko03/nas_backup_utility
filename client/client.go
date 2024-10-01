@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"synchronizer/backup"
+	"synchronizer/compression"
 	"synchronizer/destinations"
 	"time"
 )
@@ -26,7 +27,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		backup.CompressChunked(files, bytes, gzip.NoCompression, config.ChunkSize)
+		compression.Compress(files, bytes, gzip.NoCompression, config.ChunkSize, compression.AddFileChunked)
 		fmt.Println("backup.Compress completed")
 		bytes.Completed()
 	}()

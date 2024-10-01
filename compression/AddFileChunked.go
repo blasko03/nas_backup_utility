@@ -1,34 +1,12 @@
-package backup
+package compression
 
 import (
 	"archive/tar"
-	"compress/gzip"
-	"fmt"
-	"io"
 	"os"
 	"strconv"
 )
 
-func CompressChunked(filePaths []string, destination io.Writer, level int, chunkSize int) []error {
-	var e []error
-
-	gzipWriter, _ := gzip.NewWriterLevel(destination, level)
-	defer gzipWriter.Close()
-
-	tarWriter := tar.NewWriter(gzipWriter)
-	defer tarWriter.Close()
-
-	for _, filePath := range filePaths {
-		fmt.Println("Compressing " + filePath)
-		err := addFileChunked(filePath, tarWriter, chunkSize)
-		if err != nil {
-			e = append(e, err)
-		}
-	}
-	return e
-}
-
-func addFileChunked(filePath string, tarWriter *tar.Writer, chunkSize int) error {
+func AddFileChunked(filePath string, tarWriter *tar.Writer, chunkSize int) error {
 	file, err := os.Open(filePath)
 
 	if err != nil {
