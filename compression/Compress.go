@@ -4,7 +4,11 @@ import (
 	"fmt"
 )
 
-func Compress(filePaths []string, addFile *AddFileChunked) []error {
+type IAddFile interface {
+	Write(string) error
+}
+
+func Compress(filePaths []string, addFile IAddFile) []error {
 	var e []error
 
 	for _, filePath := range filePaths {
