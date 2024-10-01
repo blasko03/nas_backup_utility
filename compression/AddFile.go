@@ -25,10 +25,6 @@ func (t *AddFile) Write(filePath string) error {
 
 	defer file.Close()
 
-	if err != nil {
-		return err
-	}
-
 	stat, err := file.Stat()
 	if err != nil {
 		return err
