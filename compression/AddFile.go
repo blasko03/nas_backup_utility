@@ -6,7 +6,17 @@ import (
 	"os"
 )
 
-func AddFile(filePath string, tarWriter *tar.Writer) error {
+type AddFile struct {
+	archive *TarGz
+}
+
+func NewAddFile(tarWriter *TarGz) *AddFile {
+	return &AddFile{
+		archive: tarWriter,
+	}
+}
+
+func (t *AddFile) Write(filePath string) error {
 	file, err := os.Open(filePath)
 
 	if err != nil {
@@ -31,12 +41,12 @@ func AddFile(filePath string, tarWriter *tar.Writer) error {
 		ModTime: stat.ModTime(),
 	}
 
-	err = tarWriter.WriteHeader(header)
+	err = t.archive.WriteHeader(header)
 	if err != nil {
 		return err
 	}
 
-	_, err = io.Copy(tarWriter, file)
+	_, err = io.Copy(t.archive, file)
 	if err != nil {
 		return err
 	}
