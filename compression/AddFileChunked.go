@@ -2,11 +2,25 @@ package compression
 
 import (
 	"archive/tar"
+	"errors"
+	"io"
 	"os"
 	"strconv"
 )
 
-func AddFileChunked(filePath string, tarWriter *tar.Writer, chunkSize int) error {
+type AddFileChunked struct {
+	archive   *TarGz
+	chunkSize int
+}
+
+func NewAddFileChunked(tarWriter *TarGz, chunkSize int) *AddFileChunked {
+	return &AddFileChunked{
+		archive:   tarWriter,
+		chunkSize: chunkSize,
+	}
+}
+
+func (t *AddFileChunked) Write(filePath string) error {
 	file, err := os.Open(filePath)
 
 	if err != nil {
@@ -14,10 +28,6 @@ func AddFileChunked(filePath string, tarWriter *tar.Writer, chunkSize int) error
 	}
 
 	defer file.Close()
-
-	if err != nil {
-		return err
-	}
 
 	stat, err := file.Stat()
 	if err != nil {
@@ -27,11 +37,16 @@ func AddFileChunked(filePath string, tarWriter *tar.Writer, chunkSize int) error
 	reading := true
 
 	for i := 0; reading; i++ {
-		bytes := make([]byte, chunkSize)
+		bytes := make([]byte, t.chunkSize)
 		n, err := file.Read(bytes)
 
 		if err != nil {
-			return err
+			if errors.Is(err, io.EOF) {
+				reading = false
+				return nil
+			} else {
+				return err
+			}
 		}
 
 		header := &tar.Header{
@@ -40,14 +55,13 @@ func AddFileChunked(filePath string, tarWriter *tar.Writer, chunkSize int) error
 			Mode:    int64(stat.Mode()),
 			ModTime: stat.ModTime(),
 		}
-
-		err = tarWriter.WriteHeader(header)
+		err = t.archive.WriteHeader(header)
 
 		if err != nil {
 			return err
 		}
-		tarWriter.Write(bytes[0:n])
-		reading = n > 0
+
+		t.archive.Write(bytes[0:n])
 	}
 
 	return nil

@@ -6,11 +6,11 @@ import (
 )
 
 type LimitedBuffer struct {
-	buffer    bytes.Buffer
-	maxSize   int
-	lock      sync.Mutex
-	cond      *sync.Cond
-	completed bool
+	buffer  bytes.Buffer
+	maxSize int
+	lock    sync.Mutex
+	cond    *sync.Cond
+	closed  bool
 }
 
 func NewLimitedBuffer(maxSize int) *LimitedBuffer {
@@ -18,21 +18,21 @@ func NewLimitedBuffer(maxSize int) *LimitedBuffer {
 		maxSize: maxSize,
 	}
 	lb.cond = sync.NewCond(&lb.lock)
-	lb.completed = false
+	lb.closed = false
 	return lb
 }
 
-func (lb *LimitedBuffer) Completed() {
+func (lb *LimitedBuffer) Close() {
 	lb.lock.Lock()
 	defer lb.lock.Unlock()
 	lb.cond.Broadcast()
-	lb.completed = true
+	lb.closed = true
 }
 
-func (lb *LimitedBuffer) IsCompleted() bool {
+func (lb *LimitedBuffer) IsClosed() bool {
 	lb.lock.Lock()
 	defer lb.lock.Unlock()
-	return lb.completed
+	return lb.closed
 }
 
 func (lb *LimitedBuffer) Write(data []byte) (int, error) {
@@ -71,7 +71,7 @@ func (lb *LimitedBuffer) Read(p []byte) (int, error) {
 
 	lb.cond.Broadcast()
 
-	if lb.buffer.Len() == 0 && !lb.completed {
+	if lb.buffer.Len() == 0 && !lb.closed {
 		lb.cond.Wait()
 	}
 

@@ -34,6 +34,6 @@ func (upload *HttpUploader) Write(data []byte) (int, error) {
 	return upload.buffer.Len(), err
 }
 
-func (server *HttpUploader) Close() (int, error) {
-	return 0, nil
+func (server *HttpUploader) Close() error {
+	return nil
 }
