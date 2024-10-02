@@ -9,11 +9,16 @@ import (
 )
 
 type AddFileChunked struct {
-	archive   *TarGz
+	archive   ITarGz
 	chunkSize int
 }
 
-func NewAddFileChunked(tarWriter *TarGz, chunkSize int) *AddFileChunked {
+type ITarGz interface {
+	AddFile(header *tar.Header, data []byte) (int, error)
+	Close()
+}
+
+func NewAddFileChunked(tarWriter ITarGz, chunkSize int) *AddFileChunked {
 	return &AddFileChunked{
 		archive:   tarWriter,
 		chunkSize: chunkSize,
@@ -55,13 +60,15 @@ func (t *AddFileChunked) Write(filePath string) error {
 			Mode:    int64(stat.Mode()),
 			ModTime: stat.ModTime(),
 		}
-		err = t.archive.WriteHeader(header)
 
 		if err != nil {
 			return err
 		}
+		_, err = t.archive.AddFile(header, bytes[0:n])
 
-		t.archive.Write(bytes[0:n])
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
