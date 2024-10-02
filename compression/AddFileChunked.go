@@ -3,7 +3,6 @@ package compression
 import (
 	"archive/tar"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -41,9 +40,9 @@ func (t *AddFileChunked) Write(filePath string) error {
 	}
 
 	reading := true
-
+	bytes := make([]byte, t.chunkSize)
 	for i := 0; reading; i++ {
-		bytes := make([]byte, t.chunkSize)
+
 		n, err := file.Read(bytes)
 
 		if err != nil {
@@ -54,7 +53,7 @@ func (t *AddFileChunked) Write(filePath string) error {
 				return err
 			}
 		}
-		fmt.Println(filePath + ".bck-chunk-" + strconv.Itoa(i))
+
 		header := &tar.Header{
 			Name:    filePath + ".bck-chunk-" + strconv.Itoa(i),
 			Size:    int64(n),

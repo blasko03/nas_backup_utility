@@ -9,13 +9,13 @@ import (
 type TarGzChunked struct {
 	gzipWriter     *gzip.Writer
 	tarWriter      *tar.Writer
-	files          chan []byte
+	files          chan *bytes.Buffer
 	level          int
 	buffer         *bytes.Buffer
 	archiveMaxSize int
 }
 
-func NewTarGzChunked(files chan []byte, level int, archiveMaxSize int) *TarGzChunked {
+func NewTarGzChunked(files chan *bytes.Buffer, level int, archiveMaxSize int) *TarGzChunked {
 	t := &TarGzChunked{
 		files:          files,
 		level:          level,
@@ -54,6 +54,6 @@ func (t *TarGzChunked) Close() {
 	if t.tarWriter != nil {
 		t.tarWriter.Close()
 		t.gzipWriter.Close()
-		t.files <- t.buffer.Bytes()
+		t.files <- t.buffer
 	}
 }

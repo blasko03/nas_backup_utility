@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"compress/gzip"
 	"fmt"
+	"io"
 	"os"
 	"sync"
 	"synchronizer/backup"
@@ -17,7 +19,7 @@ type DestinationWriter interface {
 
 func main() {
 	var wg sync.WaitGroup
-	files := make(chan []byte, 2)
+	files := make(chan *bytes.Buffer)
 	wg.Add(1)
 	go StratCompression(&wg, files)
 
@@ -28,7 +30,7 @@ func main() {
 	fmt.Println("finished")
 }
 
-func StratCompression(wg *sync.WaitGroup, files chan []byte) {
+func StratCompression(wg *sync.WaitGroup, files chan *bytes.Buffer) {
 	defer wg.Done()
 
 	config := backup.GetConfig()
@@ -41,7 +43,6 @@ func StratCompression(wg *sync.WaitGroup, files chan []byte) {
 	}
 
 	tarGz := compression.NewTarGzChunked(files, gzip.NoCompression, config.ArchiveMaxSize)
-
 	addFile := compression.NewAddFileChunked(tarGz, config.ChunkSize)
 	errors := compression.Compress(changedFiles, addFile)
 
@@ -51,7 +52,7 @@ func StratCompression(wg *sync.WaitGroup, files chan []byte) {
 	fmt.Println("Archives crearted")
 }
 
-func SaveData(wg *sync.WaitGroup, files chan []byte) {
+func SaveData(wg *sync.WaitGroup, files chan *bytes.Buffer) {
 	//destination := destinations.NewHttpUploader()
 	defer wg.Done()
 	revieving := true
@@ -61,13 +62,15 @@ func SaveData(wg *sync.WaitGroup, files chan []byte) {
 		if !revieving {
 			return
 		}
+		//time.Sleep(time.Hour)
 		filename := fmt.Sprintf("/tmp/test/tarballFilePath%d.tar.gz", i)
 
 		os.Remove(filename)
 		destination, _ := os.Create(filename)
-		n, err := destination.Write(archive)
-		fmt.Println(filename, len(archive))
+		//n, err := destination.Write(archive.Bytes())
+		io.Copy(destination, archive)
+		//fmt.Println(filename, len(archive))
 		destination.Close()
-		fmt.Println(n, err)
+		//fmt.Println(n, err)
 	}
 }
