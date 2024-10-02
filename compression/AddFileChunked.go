@@ -3,6 +3,7 @@ package compression
 import (
 	"archive/tar"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -53,16 +54,12 @@ func (t *AddFileChunked) Write(filePath string) error {
 				return err
 			}
 		}
-
+		fmt.Println(filePath + ".bck-chunk-" + strconv.Itoa(i))
 		header := &tar.Header{
 			Name:    filePath + ".bck-chunk-" + strconv.Itoa(i),
 			Size:    int64(n),
 			Mode:    int64(stat.Mode()),
 			ModTime: stat.ModTime(),
-		}
-
-		if err != nil {
-			return err
 		}
 		_, err = t.archive.AddFile(header, bytes[0:n])
 

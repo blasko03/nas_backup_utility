@@ -7,28 +7,26 @@ import (
 )
 
 type TarGzChunked struct {
-	gzipWriter *gzip.Writer
-	tarWriter  *tar.Writer
-	files      chan []byte
-	level      int
-	buffer     bytes.Buffer
-	counter    int
-	bytes      int64
+	gzipWriter     *gzip.Writer
+	tarWriter      *tar.Writer
+	files          chan []byte
+	level          int
+	buffer         *bytes.Buffer
+	archiveMaxSize int
 }
 
-func NewTarGzChunked(files chan []byte, level int) *TarGzChunked {
+func NewTarGzChunked(files chan []byte, level int, archiveMaxSize int) *TarGzChunked {
 	t := &TarGzChunked{
-		files:   files,
-		level:   level,
-		counter: 0,
-		bytes:   0,
+		files:          files,
+		level:          level,
+		archiveMaxSize: archiveMaxSize,
 	}
 
 	return t
 }
 
 func (t *TarGzChunked) AddFile(header *tar.Header, data []byte) (int, error) {
-	if t.counter%10 == 0 {
+	if t.buffer == nil || t.buffer.Len() >= t.archiveMaxSize || t.counter == 0 {
 		t.Close()
 		t.newArchive()
 	}
@@ -40,13 +38,12 @@ func (t *TarGzChunked) AddFile(header *tar.Header, data []byte) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	t.counter++
-	t.bytes += int64(n)
 	return n, nil
 }
 
 func (t *TarGzChunked) newArchive() error {
-	gzipWriter, err := gzip.NewWriterLevel(&t.buffer, t.level)
+	t.buffer = new(bytes.Buffer)
+	gzipWriter, err := gzip.NewWriterLevel(t.buffer, t.level)
 	tarWriter := tar.NewWriter(gzipWriter)
 	t.gzipWriter = gzipWriter
 	t.tarWriter = tarWriter

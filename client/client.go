@@ -32,7 +32,7 @@ func StratCompression(wg *sync.WaitGroup, files chan []byte) {
 	defer wg.Done()
 
 	config := backup.GetConfig()
-	var dateFrom = time.Now().Add(-1 * time.Hour)
+	var dateFrom = time.Now().Add(-10000 * time.Hour)
 
 	changedFiles, err := backup.ChangedFiles(config.IncludedFolders[0], &dateFrom, config.ExcludedFolders)
 	if err != nil {
@@ -40,10 +40,12 @@ func StratCompression(wg *sync.WaitGroup, files chan []byte) {
 		return
 	}
 
-	tarGz := compression.NewTarGzChunked(files, gzip.BestCompression)
+	tarGz := compression.NewTarGzChunked(files, gzip.NoCompression, config.ArchiveMaxSize)
 
 	addFile := compression.NewAddFileChunked(tarGz, config.ChunkSize)
-	compression.Compress(changedFiles, addFile)
+	errors := compression.Compress(changedFiles, addFile)
+
+	fmt.Println(errors)
 	tarGz.Close()
 	close(files)
 	fmt.Println("Archives crearted")
@@ -59,11 +61,13 @@ func SaveData(wg *sync.WaitGroup, files chan []byte) {
 		if !revieving {
 			return
 		}
-		filename := fmt.Sprintf("/tmp/tarballFilePath.tar.gz %d", i)
+		filename := fmt.Sprintf("/tmp/test/tarballFilePath%d.tar.gz", i)
+
 		os.Remove(filename)
 		destination, _ := os.Create(filename)
 		n, err := destination.Write(archive)
-		defer destination.Close()
+		fmt.Println(filename, len(archive))
+		destination.Close()
 		fmt.Println(n, err)
 	}
 }
