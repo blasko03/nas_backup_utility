@@ -4,18 +4,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"io"
-	"os"
 	"sync"
 	"synchronizer/backup"
 	"synchronizer/compression"
+	"synchronizer/destinations"
 	"time"
 )
-
-type DestinationWriter interface {
-	Write([]byte) (int, error)
-	Close() error
-}
 
 func main() {
 	var wg sync.WaitGroup
@@ -53,7 +47,7 @@ func StratCompression(wg *sync.WaitGroup, files chan *bytes.Buffer) {
 }
 
 func SaveData(wg *sync.WaitGroup, files chan *bytes.Buffer) {
-	//destination := destinations.NewHttpUploader()
+	destination := destinations.NewHttpUploader()
 	defer wg.Done()
 	revieving := true
 	for i := 0; revieving; i++ {
@@ -62,15 +56,7 @@ func SaveData(wg *sync.WaitGroup, files chan *bytes.Buffer) {
 		if !revieving {
 			return
 		}
-		//time.Sleep(time.Hour)
-		filename := fmt.Sprintf("/tmp/test/tarballFilePath%d.tar.gz", i)
 
-		os.Remove(filename)
-		destination, _ := os.Create(filename)
-		//n, err := destination.Write(archive.Bytes())
-		io.Copy(destination, archive)
-		//fmt.Println(filename, len(archive))
-		destination.Close()
-		//fmt.Println(n, err)
+		destination.Save(archive, i)
 	}
 }

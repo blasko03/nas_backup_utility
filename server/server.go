@@ -10,7 +10,7 @@ import (
 func fileUpload(w http.ResponseWriter, r *http.Request) {
 	uploadId := r.PathValue("uploadId")
 	part := r.PathValue("part")
-	fileName := fmt.Sprintf("/tmp/%s-tarballFilePath.tar.gz", uploadId)
+	fileName := fmt.Sprintf("/tmp/%s/tarballFilePath%s.tar.gz", uploadId, part)
 	if part == "0" {
 		fmt.Println("remove file")
 		os.Remove(fileName)
