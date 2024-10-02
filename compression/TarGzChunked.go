@@ -26,7 +26,7 @@ func NewTarGzChunked(files chan []byte, level int, archiveMaxSize int) *TarGzChu
 }
 
 func (t *TarGzChunked) AddFile(header *tar.Header, data []byte) (int, error) {
-	if t.buffer == nil || t.buffer.Len() >= t.archiveMaxSize || t.counter == 0 {
+	if t.buffer == nil || t.buffer.Len() >= t.archiveMaxSize {
 		t.Close()
 		t.newArchive()
 	}
