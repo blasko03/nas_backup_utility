@@ -9,16 +9,19 @@ type IAddFile interface {
 	Write(string) ([]byte, error)
 }
 
-func Compress(filePaths []string, addFile IAddFile) []error {
-	var e []error
+type CompressedFile struct {
+	path string
+	hash []byte
+	err  error
+}
 
+func Compress(filePaths []string, addFile IAddFile) *[]CompressedFile {
+	var compressedFiles []CompressedFile
 	for _, filePath := range filePaths {
 		fmt.Println("Compressing " + filePath)
 		hash, err := addFile.Write(filePath)
 		fmt.Println(hex.EncodeToString(hash))
-		if err != nil {
-			e = append(e, err)
-		}
+		compressedFiles = append(compressedFiles, CompressedFile{path: filePath, hash: hash, err: err})
 	}
-	return e
+	return &compressedFiles
 }

@@ -1,34 +1,66 @@
 package main
 
 import (
+	"archive/tar"
+	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 func fileUpload(w http.ResponseWriter, r *http.Request) {
 	uploadId := r.PathValue("uploadId")
-	part := r.PathValue("part")
-	fileName := fmt.Sprintf("/tmp/%s/tarballFilePath%s.tar.gz", uploadId, part)
-	if part == "0" {
-		fmt.Println("remove file")
-		os.Remove(fileName)
-	}
+	chunk := r.PathValue("chunk")
 
-	out, _ := os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	fileName := fmt.Sprintf("/tmp/%s/backup-%s.tar.gz", uploadId, chunk)
+	file, _ := os.Create(fileName)
+	io.Copy(file, r.Body)
 
-	defer out.Close()
+	defer file.Close()
 	defer r.Body.Close()
+}
 
-	data, _ := io.ReadAll(r.Body)
+func fileUploadCompleted(w http.ResponseWriter, r *http.Request) {
+	uploadId := r.PathValue("uploadId")
+	checksum := sha256.New()
+	for i := 0; i <= 3; i++ {
+		fileName := fmt.Sprintf("/tmp/%s/backup-%s.tar.gz", uploadId, strconv.Itoa(i))
+		archive, _ := os.Open(fileName)
 
-	out.Write(data)
+		gzipStream, err := gzip.NewReader(archive)
+		if err != nil {
+			log.Fatal("failed")
+		}
+
+		tarReader := tar.NewReader(gzipStream)
+
+		for {
+			header, err := tarReader.Next()
+			if err == io.EOF {
+				break
+			}
+			fmt.Println(err)
+			fmt.Println(header)
+			io.Copy(checksum, tarReader)
+		}
+	}
+	fmt.Println(hex.EncodeToString(checksum.Sum(nil)))
+
+}
+
+func inventory(w http.ResponseWriter, r *http.Request) {
+
 }
 
 func main() {
-	http.HandleFunc("/fileUpload/{uploadId}/{part}", fileUpload)
-	http.HandleFunc("/fileUploadCompleted", fileUpload)
+	http.HandleFunc("/fileUpload/{uploadId}/{chunk}", fileUpload)
+	http.HandleFunc("/fileUploadCompleted/{uploadId}", fileUploadCompleted)
+	http.HandleFunc("/inventory", inventory)
 	err := http.ListenAndServe(":3000", nil)
 
 	if err != nil {
