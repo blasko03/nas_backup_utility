@@ -1,7 +1,6 @@
 package compression
 
 import (
-	"encoding/hex"
 	"fmt"
 )
 
@@ -10,18 +9,17 @@ type IAddFile interface {
 }
 
 type CompressedFile struct {
-	path string
-	hash []byte
+	Path string
+	Hash []byte
 	err  error
 }
 
-func Compress(filePaths []string, addFile IAddFile) *[]CompressedFile {
+func Compress(filePaths *[]string, addFile IAddFile) *[]CompressedFile {
 	var compressedFiles []CompressedFile
-	for _, filePath := range filePaths {
+	for _, filePath := range *filePaths {
 		fmt.Println("Compressing " + filePath)
 		hash, err := addFile.Write(filePath)
-		fmt.Println(hex.EncodeToString(hash))
-		compressedFiles = append(compressedFiles, CompressedFile{path: filePath, hash: hash, err: err})
+		compressedFiles = append(compressedFiles, CompressedFile{Path: filePath, Hash: hash, err: err})
 	}
 	return &compressedFiles
 }

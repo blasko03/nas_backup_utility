@@ -5,12 +5,16 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"hash"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
+	"path"
+	"strings"
+	"synchronizer/compression"
 )
 
 func fileUpload(w http.ResponseWriter, r *http.Request) {
@@ -26,31 +30,44 @@ func fileUpload(w http.ResponseWriter, r *http.Request) {
 }
 
 func fileUploadCompleted(w http.ResponseWriter, r *http.Request) {
-	uploadId := r.PathValue("uploadId")
-	checksum := sha256.New()
-	for i := 0; i <= 3; i++ {
-		fileName := fmt.Sprintf("/tmp/%s/backup-%s.tar.gz", uploadId, strconv.Itoa(i))
-		archive, _ := os.Open(fileName)
 
-		gzipStream, err := gzip.NewReader(archive)
+	uploadId := r.PathValue("uploadId")
+	var compressedFiles []compression.CompressedFile
+	dec := json.NewDecoder(r.Body)
+	dec.Decode(&compressedFiles)
+	fmt.Println(compressedFiles)
+	baseDir := path.Join("/", "tmp", uploadId)
+	archives, _ := os.ReadDir(baseDir)
+	hashes := make(map[string]hash.Hash)
+	for _, archive := range archives {
+		compressed, err := os.Open(path.Join(baseDir, archive.Name()))
 		if err != nil {
-			log.Fatal("failed")
+			log.Fatal(err)
+			return
+		}
+		gzipStream, err := gzip.NewReader(compressed)
+		if err != nil {
+			log.Fatal(err)
 		}
 
 		tarReader := tar.NewReader(gzipStream)
 
 		for {
 			header, err := tarReader.Next()
+
 			if err == io.EOF {
 				break
 			}
-			fmt.Println(err)
-			fmt.Println(header)
-			io.Copy(checksum, tarReader)
+			filename := strings.Split(header.Name, ".bck-chunk-")
+			if hashes[filename[0]] == nil {
+				hashes[filename[0]] = sha256.New()
+			}
+			io.Copy(hashes[filename[0]], tarReader)
 		}
 	}
-	fmt.Println(hex.EncodeToString(checksum.Sum(nil)))
-
+	for key, file := range hashes {
+		fmt.Println(key, hex.EncodeToString(file.Sum(nil)))
+	}
 }
 
 func inventory(w http.ResponseWriter, r *http.Request) {

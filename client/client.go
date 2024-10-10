@@ -13,20 +13,23 @@ import (
 
 func main() {
 	var wg sync.WaitGroup
-	files := make(chan *bytes.Buffer)
+	files := make(chan *bytes.Buffer, 1)
 	var compressedFiles *[]compression.CompressedFile
+	destination := destinations.NewHttpUploader()
+
 	wg.Add(1)
 	go StratCompression(&wg, files, &compressedFiles)
 
 	wg.Add(1)
-	go SaveData(&wg, files)
+	//go SaveData(&wg, destination, files)
 
 	wg.Wait()
+	destination.Close(compressedFiles)
 	fmt.Println(compressedFiles)
 	fmt.Println("finished")
 }
 
-func StratCompression(wg *sync.WaitGroup, files chan *bytes.Buffer, pointer **[]compression.CompressedFile) {
+func StratCompression(wg *sync.WaitGroup, files chan *bytes.Buffer, compressedFiles **[]compression.CompressedFile) {
 	defer wg.Done()
 
 	config := backup.GetConfig()
@@ -40,28 +43,23 @@ func StratCompression(wg *sync.WaitGroup, files chan *bytes.Buffer, pointer **[]
 
 	tarGz := compression.NewTarGzChunked(files, gzip.NoCompression, config.ArchiveMaxSize)
 	addFile := compression.NewAddFileChunked(tarGz, config.ChunkSize)
-	*pointer = compression.Compress(changedFiles, addFile)
+	*compressedFiles = compression.Compress(&changedFiles, addFile)
 
 	tarGz.Close()
 	close(files)
 	fmt.Println("Archives crearted")
 }
 
-func SaveData(wg *sync.WaitGroup, files chan *bytes.Buffer) {
-	destination := destinations.NewHttpUploader()
+func SaveData(wg *sync.WaitGroup, destination *destinations.HttpUploader, files chan *bytes.Buffer) {
 	defer wg.Done()
 	recieving := true
 	for i := 0; recieving; i++ {
-		archive, ok := <-files
+		_, ok := <-files
 		recieving = ok
 		if !recieving {
 			return
 		}
-
-		destination.Save(archive, i)
+		time.Sleep(time.Millisecond * 10000)
+		//destination.Save(archive, i)
 	}
-}
-
-func ConfirmBackup(compressedFiles *[]compression.CompressedFile) {
-
 }

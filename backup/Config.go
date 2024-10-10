@@ -10,9 +10,9 @@ type Config struct {
 
 func GetConfig() Config {
 	return Config{
-		ChunkSize:       4 * 1024 * 1024,
-		ArchiveMaxSize:  2 * 1024 * 1024,
-		IncludedFolders: []string{"/home/daniel/Downloads/test"},
+		ChunkSize:       2 * 1024 * 1024,
+		ArchiveMaxSize:  4 * 1024 * 1024,
+		IncludedFolders: []string{"/home/daniel/Downloads/"},
 		ExcludedFolders: []string{},
 	}
 }
