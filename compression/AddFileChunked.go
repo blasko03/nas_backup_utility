@@ -2,6 +2,7 @@ package compression
 
 import (
 	"archive/tar"
+	"crypto/sha256"
 	"errors"
 	"io"
 	"os"
@@ -25,18 +26,19 @@ func NewAddFileChunked(tarWriter ITarGz, chunkSize int) *AddFileChunked {
 	}
 }
 
-func (t *AddFileChunked) Write(filePath string) error {
+func (t *AddFileChunked) Write(filePath string) ([]byte, error) {
 	file, err := os.Open(filePath)
+	checksum := sha256.New()
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer file.Close()
 
 	stat, err := file.Stat()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	reading := true
@@ -48,9 +50,9 @@ func (t *AddFileChunked) Write(filePath string) error {
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				reading = false
-				return nil
+				break
 			} else {
-				return err
+				return nil, err
 			}
 		}
 
@@ -61,11 +63,11 @@ func (t *AddFileChunked) Write(filePath string) error {
 			ModTime: stat.ModTime(),
 		}
 		_, err = t.archive.AddFile(header, bytes[0:n])
-
+		checksum.Write(bytes[0:n])
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return checksum.Sum(nil), nil
 }
